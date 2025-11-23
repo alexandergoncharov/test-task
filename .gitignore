@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# IDE
+.vscode/
+
+# NestJS
+backend/dist/
+backend/.env
+
+# SvelteKit
+frontend/.svelte-kit/
+frontend/build/
+frontend/.env
+
