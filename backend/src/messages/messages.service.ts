@@ -2,12 +2,15 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Message } from '../entities/message.entity';
 import { Conversation } from '../entities/conversation.entity';
 import { CreateMessageDto } from './dto/create-message.dto';
+import { MessagesGateway } from './messages.gateway';
 
 @Injectable()
 export class MessagesService {
@@ -16,6 +19,8 @@ export class MessagesService {
     private messageRepository: Repository<Message>,
     @InjectRepository(Conversation)
     private conversationRepository: Repository<Conversation>,
+    @Inject(forwardRef(() => MessagesGateway))
+    private messagesGateway: MessagesGateway,
   ) {}
 
   async findAll(
@@ -76,13 +81,18 @@ export class MessagesService {
     conversation.updatedAt = new Date();
     await this.conversationRepository.save(conversation);
 
-    return {
+    const messageData = {
       id: savedMessage.id,
       conversationId: savedMessage.conversationId,
       senderId: savedMessage.senderId,
       content: savedMessage.content,
       createdAt: savedMessage.createdAt,
     };
+
+    // Broadcast message via WebSocket
+    this.messagesGateway.broadcastMessage(conversationId, messageData);
+
+    return messageData;
   }
 
   private async verifyConversationAccess(
