@@ -4,7 +4,6 @@
 	import { auth } from '$lib/stores/auth';
 	import { messagesStore } from '$lib/stores/messages';
 	import { sendMessage } from '$lib/services/messages';
-	import { conversationsStore } from '$lib/stores/conversations';
 	import { goto } from '$app/navigation';
 	import {
 		connectSocket,
@@ -18,17 +17,56 @@
 	let error = '';
 
 	const conversationId = $page.params.conversationId as string;
-	let otherParticipantId = '';
 	let unsubscribeMessage: (() => void) | null = null;
+	let messagesContainer: HTMLDivElement;
+	let isUserScrolling = false;
+	let scrollTimeout: ReturnType<typeof setTimeout> | null = null;
+
+	// Check if user is near bottom of scroll
+	function isNearBottom(): boolean {
+		if (!messagesContainer) return true;
+		const threshold = 150; // pixels from bottom
+		return (
+			messagesContainer.scrollHeight -
+				messagesContainer.scrollTop -
+				messagesContainer.clientHeight <
+			threshold
+		);
+	}
+
+	// Scroll to bottom function
+	function scrollToBottom() {
+		if (messagesContainer && !isUserScrolling) {
+			requestAnimationFrame(() => {
+				if (messagesContainer && !isUserScrolling) {
+					messagesContainer.scrollTop = messagesContainer.scrollHeight;
+				}
+			});
+		}
+	}
+
+	// Track scroll position - detect if user is manually scrolling
+	function handleScroll() {
+		isUserScrolling = true;
+		
+		// Clear existing timeout
+		if (scrollTimeout) {
+			clearTimeout(scrollTimeout);
+		}
+		
+		// Reset flag after user stops scrolling for 1 second
+		scrollTimeout = setTimeout(() => {
+			isUserScrolling = false;
+		}, 1000);
+	}
 
 	onMount(async () => {
 		await messagesStore.fetchByConversation(conversationId);
 
-		// Find other participant
-		const conversation = $conversationsStore.items.find((c) => c.id === conversationId);
-		if (conversation) {
-			otherParticipantId = conversation.participants.find((id) => id !== $auth.user?.id) || '';
-		}
+		// Scroll to bottom after loading messages
+		setTimeout(() => {
+			scrollToBottom();
+		}, 200);
 
 		// Connect WebSocket and join conversation
 		if ($auth.token) {
@@ -43,6 +81,11 @@
 			unsubscribeMessage = onNewMessage((message) => {
 				if (message.conversationId === conversationId) {
 					messagesStore.addMessage(message);
+					
+					// Auto-scroll only if user is near bottom or it's their own message
+					if (isNearBottom() || message.senderId === $auth.user?.id) {
+						setTimeout(() => scrollToBottom(), 50);
+					}
 				}
 			});
 		}
@@ -51,6 +94,9 @@
 	onDestroy(() => {
 		if (unsubscribeMessage) {
 			unsubscribeMessage();
+		}
+		if (scrollTimeout) {
+			clearTimeout(scrollTimeout);
 		}
 		leaveConversation(conversationId);
 		messagesStore.clear();
@@ -66,6 +112,8 @@
 
 		try {
 			await sendMessage(conversationId, content);
+			// Scroll to bottom after sending message
+			setTimeout(() => scrollToBottom(), 100);
 		} catch (err) {
 			messageContent = content;
 			error = (err as { message?: string }).message || 'Failed to send message';
@@ -88,7 +136,7 @@
 		<h2>Chat</h2>
 	</div>
 
-	<div class="messages-container">
+	<div class="messages-container" bind:this={messagesContainer} on:scroll={handleScroll}>
 		{#if $messagesStore.loading}
 			<p class="status">Loading messages...</p>
 		{:else if $messagesStore.error}
