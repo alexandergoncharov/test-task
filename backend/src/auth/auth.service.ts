@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { FindOptionsWhere, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from '../entities/user.entity';
 import { RegisterDto } from './dto/register.dto';
@@ -70,7 +70,9 @@ export class AuthService {
     const { emailOrUsername, password } = loginDto;
 
     const user = await this.userRepository.findOne({
-      where: [{ email: emailOrUsername }, { username: emailOrUsername }],
+      where: {
+        $or: [{ email: emailOrUsername }, { username: emailOrUsername }],
+      } as FindOptionsWhere<User>,
     });
 
     if (!user) {
