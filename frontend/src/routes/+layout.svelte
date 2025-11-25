@@ -2,8 +2,8 @@
 	import '../app.css';
 	import { auth } from '$lib/stores/auth';
 	import { onMount } from 'svelte';
-	import { goto } from '$app/navigation';
-	import { beforeNavigate } from '$app/navigation';
+	import { goto, beforeNavigate } from '$app/navigation';
+	import AppHeader from '$lib/components/AppHeader.svelte';
 
 	const publicRoutes = ['/', '/login', '/register'];
 	let isInitialized = false;
@@ -36,13 +36,24 @@
 </script>
 
 <main>
-	<slot />
+	<AppHeader />
+	<section class="page-content">
+		<slot />
+	</section>
 </main>
 
 <style>
 	main {
 		width: 100%;
 		min-height: 100vh;
+		display: flex;
+		flex-direction: column;
+		background-color: #f6f7fb;
+	}
+
+	.page-content {
+		flex: 1;
+		padding: 1.5rem;
 	}
 </style>
 
