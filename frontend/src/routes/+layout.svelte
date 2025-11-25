@@ -3,15 +3,39 @@
 	import { auth } from '$lib/stores/auth';
 	import { onMount } from 'svelte';
 	import { goto, beforeNavigate } from '$app/navigation';
+	import { page } from '$app/stores';
 	import AppHeader from '$lib/components/AppHeader.svelte';
 
 	const publicRoutes = ['/', '/login', '/register'];
 	let isInitialized = false;
+	let lastRedirect: string | null = null;
 
 	onMount(() => {
 		auth.init();
 		isInitialized = true;
 	});
+
+	function redirect(path: string) {
+		if (lastRedirect === path) return;
+		lastRedirect = path;
+		goto(path).finally(() => {
+			lastRedirect = null;
+		});
+	}
+
+	$: if (isInitialized) {
+		const pathname = $page.url.pathname;
+		const isPublic = publicRoutes.includes(pathname);
+
+		if (!$auth.isAuthenticated && !isPublic) {
+			redirect('/login');
+		} else if (
+			$auth.isAuthenticated &&
+			(pathname === '/login' || pathname === '/register' || pathname === '/')
+		) {
+			redirect('/conversations');
+		}
+	}
 
 	beforeNavigate(({ to, cancel }) => {
 		if (!to || !isInitialized) return;
