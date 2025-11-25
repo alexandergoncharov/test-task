@@ -61,6 +61,9 @@ export class MessagesGateway
       };
 
       client.join(`user:${user.id}`);
+
+      // Emit authenticated event to confirm connection is ready
+      client.emit('authenticated', { userId: user.id });
     } catch (error) {
       client.disconnect();
     }

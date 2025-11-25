@@ -1,5 +1,6 @@
 import { writable } from 'svelte/store';
 import { apiRequest } from '../services/api';
+import { disconnectSocket } from '../services/socket';
 
 export interface User {
 	id: string;
@@ -76,6 +77,7 @@ function createAuthStore() {
 		},
 		logout: () => {
 			localStorage.removeItem('token');
+			disconnectSocket();
 			set({
 				user: null,
 				token: null,

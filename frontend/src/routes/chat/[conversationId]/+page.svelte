@@ -6,13 +6,20 @@
 	import { sendMessage } from '$lib/services/messages';
 	import { conversationsStore } from '$lib/stores/conversations';
 	import { goto } from '$app/navigation';
+	import {
+		connectSocket,
+		joinConversation,
+		leaveConversation,
+		onNewMessage
+	} from '$lib/services/socket';
 
 	let messageContent = '';
 	let sending = false;
 	let error = '';
 
-	const conversationId = $page.params.conversationId;
+	const conversationId = $page.params.conversationId as string;
 	let otherParticipantId = '';
+	let unsubscribeMessage: (() => void) | null = null;
 
 	onMount(async () => {
 		await messagesStore.fetchByConversation(conversationId);
@@ -20,27 +27,47 @@
 		// Find other participant
 		const conversation = $conversationsStore.items.find((c) => c.id === conversationId);
 		if (conversation) {
-			otherParticipantId = conversation.participants.find(
-				(id) => id !== $auth.user?.id
-			) || '';
+			otherParticipantId = conversation.participants.find((id) => id !== $auth.user?.id) || '';
+		}
+
+		// Connect WebSocket and join conversation
+		if ($auth.token) {
+			try {
+				await connectSocket($auth.token);
+				await joinConversation(conversationId);
+				setupMessageListener();
+			} catch (err) {}
+		}
+
+		function setupMessageListener() {
+			unsubscribeMessage = onNewMessage((message) => {
+				if (message.conversationId === conversationId) {
+					messagesStore.addMessage(message);
+				}
+			});
 		}
 	});
 
 	onDestroy(() => {
+		if (unsubscribeMessage) {
+			unsubscribeMessage();
+		}
+		leaveConversation(conversationId);
 		messagesStore.clear();
 	});
 
 	async function handleSend() {
 		if (!messageContent.trim() || sending) return;
 
+		const content = messageContent.trim();
+		messageContent = '';
 		sending = true;
 		error = '';
 
 		try {
-			const newMessage = await sendMessage(conversationId, messageContent.trim());
-			messagesStore.addMessage(newMessage);
-			messageContent = '';
+			await sendMessage(conversationId, content);
 		} catch (err) {
+			messageContent = content;
 			error = (err as { message?: string }).message || 'Failed to send message';
 		} finally {
 			sending = false;
@@ -71,9 +98,7 @@
 		{:else}
 			<div class="messages-list">
 				{#each $messagesStore.items as message}
-					<div
-						class="message {message.senderId === $auth.user?.id ? 'own' : 'other'}"
-					>
+					<div class="message {message.senderId === $auth.user?.id ? 'own' : 'other'}">
 						<div class="message-content">{message.content}</div>
 						<div class="message-time">
 							{new Date(message.createdAt).toLocaleTimeString([], {
@@ -257,4 +282,3 @@
 		cursor: not-allowed;
 	}
 </style>
-

@@ -36,10 +36,34 @@ function createMessagesStore() {
 			}
 		},
 		addMessage: (message: Message) => {
-			update((state) => ({
-				...state,
-				items: [...state.items, message]
-			}));
+			update((state) => {
+				// Check if message already exists to avoid duplicates
+				// Compare by ID (most reliable) or by content + sender + time (fallback)
+				const exists = state.items.some((m) => {
+					if (m.id === message.id) return true;
+					// Fallback: check by content, sender, and time (within 5 seconds)
+					if (
+						m.content === message.content &&
+						m.senderId === message.senderId &&
+						m.conversationId === message.conversationId
+					) {
+						const timeDiff = Math.abs(
+							new Date(m.createdAt).getTime() - new Date(message.createdAt).getTime()
+						);
+						if (timeDiff < 5000) return true; // Same message within 5 seconds
+					}
+					return false;
+				});
+
+				if (exists) {
+					return state;
+				}
+
+				return {
+					...state,
+					items: [...state.items, message]
+				};
+			});
 		},
 		clear: () => {
 			set({ items: [], loading: false, error: null });
