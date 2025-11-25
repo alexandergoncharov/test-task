@@ -1,8 +1,13 @@
-import { Injectable, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Conversation } from '../entities/conversation.entity';
 import { CreateConversationDto } from './dto/create-conversation.dto';
+import { ObjectId } from 'mongodb';
 
 @Injectable()
 export class ConversationsService {
@@ -19,13 +24,10 @@ export class ConversationsService {
       updatedAt: Date;
     }>
   > {
-    const conversations = await this.conversationRepository
-      .createQueryBuilder('conversation')
-      .where('conversation.participants LIKE :userId', {
-        userId: `%${userId}%`,
-      })
-      .orderBy('conversation.updatedAt', 'DESC')
-      .getMany();
+    const conversations = await this.conversationRepository.find({
+      where: { participants: { $in: [userId] } as any },
+      order: { updatedAt: 'DESC' },
+    });
 
     return conversations.map((conversation) => ({
       id: conversation.id,
@@ -51,15 +53,9 @@ export class ConversationsService {
     }
 
     // Check if conversation already exists between these two users
-    const existingConversation = await this.conversationRepository
-      .createQueryBuilder('conversation')
-      .where('conversation.participants LIKE :userId', {
-        userId: `%${userId}%`,
-      })
-      .andWhere('conversation.participants LIKE :participantId', {
-        participantId: `%${participantId}%`,
-      })
-      .getOne();
+    const existingConversation = await this.conversationRepository.findOne({
+      where: { participants: { $all: [userId, participantId] } as any },
+    });
 
     if (existingConversation) {
       return {
@@ -96,7 +92,7 @@ export class ConversationsService {
     updatedAt: Date;
   } | null> {
     const conversation = await this.conversationRepository.findOne({
-      where: { id: conversationId },
+      where: { _id: this.toObjectId(conversationId) } as any,
     });
 
     if (!conversation) {
@@ -114,5 +110,13 @@ export class ConversationsService {
       createdAt: conversation.createdAt,
       updatedAt: conversation.updatedAt,
     };
+  }
+
+  private toObjectId(id: string): ObjectId {
+    try {
+      return new ObjectId(id);
+    } catch (error) {
+      throw new BadRequestException('Invalid conversation id');
+    }
   }
 }
