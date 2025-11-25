@@ -13,11 +13,9 @@ export class UsersService {
   async findAll(): Promise<
     Array<{ id: string; email: string; username: string; createdAt: Date }>
   > {
-    const query = this.userRepository
-      .createQueryBuilder('user')
-      .select(['user.id', 'user.email', 'user.username', 'user.createdAt']);
-
-    const users = await query.getMany();
+    const users = await this.userRepository.find({
+      select: ['id', 'email', 'username', 'createdAt'],
+    });
 
     return users.map((user) => ({
       id: user.id,
