@@ -28,7 +28,7 @@
 			errorMessage = '';
 			const conversation = await createConversation(userId);
 			successMessage = 'Conversation created! Redirecting...';
-			setTimeout(() => goto(`/conversations?id=${conversation.id}`), 800);
+			setTimeout(() => goto(`/chat/${conversation.id}`), 800);
 		} catch (error) {
 			errorMessage =
 				(error as { message?: string }).message ||
