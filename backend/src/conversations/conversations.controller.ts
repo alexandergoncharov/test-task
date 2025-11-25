@@ -28,6 +28,9 @@ export class ConversationsController {
     @GetUser() user: { id: string },
     @Body() createConversationDto: CreateConversationDto,
   ) {
-    return this.conversationsService.create(user.id, createConversationDto);
+    return this.conversationsService.create(
+      user.id.toString(),
+      createConversationDto,
+    );
   }
 }

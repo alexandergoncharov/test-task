@@ -11,6 +11,7 @@ import { Message } from '../entities/message.entity';
 import { Conversation } from '../entities/conversation.entity';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { MessagesGateway } from './messages.gateway';
+import { toObjectId } from '../utils';
 
 @Injectable()
 export class MessagesService {
@@ -99,15 +100,16 @@ export class MessagesService {
     conversationId: string,
     userId: string,
   ): Promise<Conversation> {
+    const conversationObjectId = toObjectId(conversationId, 'conversation');
     const conversation = await this.conversationRepository.findOne({
-      where: { id: conversationId },
+      where: { _id: conversationObjectId } as any,
     });
 
     if (!conversation) {
       throw new NotFoundException('Conversation not found');
     }
 
-    if (!conversation.participants.includes(userId)) {
+    if (!conversation.participants.includes(userId.toString())) {
       throw new ForbiddenException('Access denied to this conversation');
     }
 

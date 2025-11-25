@@ -1,13 +1,9 @@
-import {
-  Injectable,
-  ConflictException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Conversation } from '../entities/conversation.entity';
 import { CreateConversationDto } from './dto/create-conversation.dto';
-import { ObjectId } from 'mongodb';
+import { toObjectId } from '../utils';
 
 @Injectable()
 export class ConversationsService {
@@ -92,7 +88,7 @@ export class ConversationsService {
     updatedAt: Date;
   } | null> {
     const conversation = await this.conversationRepository.findOne({
-      where: { _id: this.toObjectId(conversationId) } as any,
+      where: { _id: toObjectId(conversationId, 'conversation') } as any,
     });
 
     if (!conversation) {
@@ -110,13 +106,5 @@ export class ConversationsService {
       createdAt: conversation.createdAt,
       updatedAt: conversation.updatedAt,
     };
-  }
-
-  private toObjectId(id: string): ObjectId {
-    try {
-      return new ObjectId(id);
-    } catch (error) {
-      throw new BadRequestException('Invalid conversation id');
-    }
   }
 }

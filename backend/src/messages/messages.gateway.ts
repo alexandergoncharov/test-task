@@ -12,6 +12,7 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
+import { toObjectId } from '../utils';
 
 @WebSocketGateway({
   cors: {
@@ -44,7 +45,7 @@ export class MessagesGateway
 
       const payload = this.jwtService.verify(token);
       const user = await this.userRepository.findOne({
-        where: { id: payload.sub },
+        where: { _id: toObjectId(payload.sub, 'user') } as any,
       });
 
       if (!user) {
@@ -65,7 +66,8 @@ export class MessagesGateway
     }
   }
 
-  handleDisconnect(client: Socket) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  handleDisconnect(_client: Socket) {
     // TODO: add cleanup
   }
 
