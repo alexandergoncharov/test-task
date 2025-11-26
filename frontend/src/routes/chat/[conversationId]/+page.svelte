@@ -4,6 +4,7 @@
 	import { auth } from '$lib/stores/auth';
 	import { messagesStore } from '$lib/stores/messages';
 	import { sendMessage } from '$lib/services/messages';
+	import { usersStore } from '$lib/stores/users';
 	import { goto } from '$app/navigation';
 	import {
 		connectSocket,
@@ -61,6 +62,9 @@
 	}
 
 	onMount(async () => {
+		// Load users first to ensure they're available
+		await usersStore.fetchUsers();
+
 		await messagesStore.fetchByConversation(conversationId);
 
 		// Scroll to bottom after loading messages
@@ -128,6 +132,12 @@
 			handleSend();
 		}
 	}
+
+	// Helper function to normalize IDs to strings
+	function normalizeId(id: any): string {
+		if (!id) return '';
+		return String(id);
+	}
 </script>
 
 <div class="chat-page">
@@ -146,7 +156,19 @@
 		{:else}
 			<div class="messages-list">
 				{#each $messagesStore.items as message}
-					<div class="message {message.senderId === $auth.user?.id ? 'own' : 'other'}">
+					{@const messageSenderId = normalizeId(message.senderId)}
+					{@const currentUserId = normalizeId($auth.user?.id)}
+					{@const isOwnMessage = messageSenderId === currentUserId}
+					{@const sender = !isOwnMessage && $usersStore.users.length > 0
+						? $usersStore.users.find((u) => {
+								const userId = normalizeId(u.id);
+								return userId === messageSenderId;
+							})
+						: null}
+					<div class="message {isOwnMessage ? 'own' : 'other'}">
+						{#if !isOwnMessage && sender}
+							<div class="message-sender">{sender.username}</div>
+						{/if}
 						<div class="message-content">{message.content}</div>
 						<div class="message-time">
 							{new Date(message.createdAt).toLocaleTimeString([], {
@@ -261,6 +283,17 @@
 		align-self: flex-start;
 		background: #f1f3f5;
 		color: #1d1d1f;
+	}
+
+	.message-sender {
+		font-size: 0.75rem;
+		font-weight: 600;
+		margin-bottom: 0.25rem;
+		opacity: 0.8;
+	}
+
+	.message.own .message-sender {
+		display: none;
 	}
 
 	.message-content {
