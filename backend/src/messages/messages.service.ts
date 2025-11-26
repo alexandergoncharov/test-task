@@ -46,9 +46,9 @@ export class MessagesService {
     });
 
     return messages.map((message) => ({
-      id: message.id,
-      conversationId: message.conversationId,
-      senderId: message.senderId,
+      id: String(message.id),
+      conversationId: String(message.conversationId),
+      senderId: String(message.senderId),
       content: message.content,
       createdAt: message.createdAt,
     }));
@@ -73,7 +73,7 @@ export class MessagesService {
 
     const message = this.messageRepository.create({
       conversationId,
-      senderId: userId,
+      senderId: String(userId),
       content,
     });
 
@@ -83,9 +83,9 @@ export class MessagesService {
     await this.conversationRepository.save(conversation);
 
     const messageData = {
-      id: savedMessage.id,
-      conversationId: savedMessage.conversationId,
-      senderId: savedMessage.senderId,
+      id: String(savedMessage.id),
+      conversationId: String(savedMessage.conversationId),
+      senderId: String(savedMessage.senderId),
       content: savedMessage.content,
       createdAt: savedMessage.createdAt,
     };
@@ -109,7 +109,7 @@ export class MessagesService {
       throw new NotFoundException('Conversation not found');
     }
 
-    if (!conversation.participants.includes(userId.toString())) {
+    if (!conversation.participants.includes(String(userId))) {
       throw new ForbiddenException('Access denied to this conversation');
     }
 

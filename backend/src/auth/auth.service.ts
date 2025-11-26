@@ -54,7 +54,7 @@ export class AuthService {
       const savedUser = await this.userRepository.save(user);
 
       return {
-        id: savedUser.id,
+        id: String(savedUser.id),
         email: savedUser.email,
         username: savedUser.username,
       };
@@ -86,7 +86,7 @@ export class AuthService {
     }
 
     const payload = {
-      sub: user.id,
+      sub: String(user.id),
       email: user.email,
       username: user.username,
     };
@@ -95,7 +95,7 @@ export class AuthService {
     return {
       accessToken,
       user: {
-        id: user.id,
+        id: String(user.id),
         email: user.email,
         username: user.username,
       },

@@ -18,7 +18,7 @@ export class UsersService {
     });
 
     return users.map((user) => ({
-      id: user.id,
+      id: String(user.id),
       email: user.email,
       username: user.username,
       createdAt: user.createdAt,
@@ -41,7 +41,7 @@ export class UsersService {
     }
 
     return {
-      id: user.id,
+      id: String(user.id),
       email: user.email,
       username: user.username,
       createdAt: user.createdAt,
